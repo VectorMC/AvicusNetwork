@@ -52,6 +52,10 @@ public class Players {
     }
 
     public static void reset(Player player) {
+        reset(player, true, true);
+    }
+
+    public static void reset(Player player, boolean clearInventory, boolean clearPotions) {
         player.setGameMode(GameMode.SURVIVAL);
         player.setAllowFlight(false);
         player.setFlying(false);
@@ -111,15 +115,20 @@ public class Players {
 
         // Inventory
         player.closeInventory();
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
+        if(clearInventory) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+        }
         player.updateInventory();
-        for (PotionEffect effect : player.getActivePotionEffects()) {
-            player.removePotionEffect(effect.getType());
+        if(clearPotions) {
+            for (PotionEffect effect : player.getActivePotionEffects()) {
+                player.removePotionEffect(effect.getType());
+            }
         }
 
         // Spigot
         player.spigot().setCollidesWithEntities(true);
+        player.spigot().respawn();
         // Todo?
         if (!VersionUtil.isCombatUpdate()) {
             player.spigot().setAffectsSpawning(true);

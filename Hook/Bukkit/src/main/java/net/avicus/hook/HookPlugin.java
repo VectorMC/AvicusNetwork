@@ -28,7 +28,7 @@ import net.avicus.hook.listener.AtlasListener;
 import net.avicus.hook.listener.BackpackShopListener;
 import net.avicus.hook.listener.ChatListener;
 import net.avicus.hook.listener.SettingModule;
-import net.avicus.hook.prestige.ExperienceRewardListener;
+import net.avicus.hook.prestige.ExperienceReward;
 import net.avicus.hook.punishment.Punishments;
 import net.avicus.hook.rate.MapRatings;
 import net.avicus.hook.sessions.Sessions;
@@ -45,6 +45,7 @@ import net.avicus.magma.network.user.rank.Ranks;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -117,7 +118,12 @@ public class HookPlugin extends JavaPlugin {
         }
 
         // Commands
-        this.commands = new AvicusCommandsManager();
+        this.commands = new AvicusCommandsManager<CommandSender>() {
+            @Override
+            public boolean hasPermission(CommandSender sender, String perm) {
+                return sender instanceof ConsoleCommandSender || sender.hasPermission(perm);
+            }
+        };
 
         AvicusCommandsRegistration cmds = new AvicusCommandsRegistration(this, this.commands);
         cmds.register(OnlineCommand.class);
@@ -166,7 +172,7 @@ public class HookPlugin extends JavaPlugin {
 
             if (Magma.get().getMm().hasModule(PrestigeModule.class) && HookConfig.Experience.Rewards
                     .isEnabled()) {
-                Events.register(new ExperienceRewardListener());
+                Events.register(new ExperienceReward());
             }
 
             if (HookConfig.getShutdownOnEmpty().orElse(true)) {

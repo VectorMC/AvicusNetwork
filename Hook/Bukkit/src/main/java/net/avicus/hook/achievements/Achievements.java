@@ -1,16 +1,6 @@
 package net.avicus.hook.achievements;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-import com.google.common.collect.TreeBasedTable;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import net.avicus.atlas.Atlas;
+import com.google.common.collect.*;
 import net.avicus.atlas.event.competitor.CompetitorWinEvent;
 import net.avicus.atlas.event.player.PlayerReceiveMVPEvent;
 import net.avicus.atlas.module.vote.PlayerCastVoteEvent;
@@ -18,12 +8,17 @@ import net.avicus.compendium.settings.PlayerSettings;
 import net.avicus.compendium.settings.Setting;
 import net.avicus.compendium.settings.types.SettingTypes;
 import net.avicus.compendium.utils.Strings;
-import net.avicus.grave.event.PlayerDeathEvent;
 import net.avicus.hook.Hook;
+import net.avicus.hook.HookPlugin;
 import net.avicus.hook.rate.MapRatedEvent;
 import net.avicus.hook.utils.Events;
 import net.avicus.hook.utils.HookTask;
 import net.avicus.hook.utils.Messages;
+import net.avicus.libraries.grave.event.PlayerDeathEvent;
+import net.avicus.libraries.tracker.DamageInfo;
+import net.avicus.libraries.tracker.damage.GravityDamageInfo;
+import net.avicus.libraries.tracker.damage.MeleeDamageInfo;
+import net.avicus.libraries.tracker.damage.ProjectileDamageInfo;
 import net.avicus.magma.Magma;
 import net.avicus.magma.database.Database;
 import net.avicus.magma.database.model.impl.Achievement;
@@ -37,21 +32,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Horse;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Minecart;
-import org.bukkit.entity.Pig;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import tc.oc.tracker.DamageInfo;
-import tc.oc.tracker.damage.GravityDamageInfo;
-import tc.oc.tracker.damage.MeleeDamageInfo;
-import tc.oc.tracker.damage.ProjectileDamageInfo;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static net.avicus.hook.achievements.AchievementsListener.ACHIEVEMENTS_LISTENERS;
 
 public class Achievements implements Module, ListenerModule {
 
@@ -179,9 +173,16 @@ public class Achievements implements Module, ListenerModule {
 
         HookTask.of(() -> this::loadAchievables).nowAsync();
 
-        if (Atlas.get().getLoader().hasModule("competitive-objectives")) {
-            Events.register(new CompetitveAchievements(this));
-        }
+        ACHIEVEMENTS_LISTENERS.forEach(listener -> {
+            try {
+                AchievementsListener achievementsListener = listener.getDeclaredConstructor(Achievements.class).newInstance(Achievements.this);
+
+                Events.register(achievementsListener);
+            } catch (InstantiationException|NoSuchMethodException|IllegalAccessException| InvocationTargetException exception) {
+                HookPlugin.getInstance().getLogger().warning("Unable to instantiate a achievement listener:");
+                exception.printStackTrace();
+            }
+        });
 
         PlayerSettings.register(ACHIEVEMENT_SETTING);
     }

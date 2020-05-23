@@ -1,13 +1,11 @@
 package net.avicus.hook.tracking;
 
-import java.util.Date;
-
-import net.avicus.atlas.Atlas;
-import net.avicus.grave.event.PlayerDeathEvent;
 import net.avicus.hook.Hook;
 import net.avicus.hook.HookConfig;
+import net.avicus.hook.HookPlugin;
 import net.avicus.hook.utils.Events;
 import net.avicus.hook.utils.HookTask;
+import net.avicus.libraries.grave.event.PlayerDeathEvent;
 import net.avicus.magma.database.model.impl.Death;
 import net.avicus.magma.network.user.Users;
 import org.bukkit.entity.LivingEntity;
@@ -15,15 +13,28 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.Date;
+
+import static net.avicus.hook.tracking.TrackingListener.TRACKERS;
+
 public class Tracking implements Listener {
 
     public static void init() {
         Tracking tracking = new Tracking();
         Events.register(tracking);
 
-        if (Atlas.get().getLoader().hasModule("competitive-objectives")) {
-            Events.register(new CompetitveTracker(tracking));
-        }
+        // register trackers
+        TRACKERS.forEach(tracker -> {
+            try {
+                TrackingListener trackingListener = tracker.getDeclaredConstructor(Tracking.class).newInstance(tracking);
+
+                Events.register(trackingListener);
+            } catch (InstantiationException|NoSuchMethodException|IllegalAccessException|InvocationTargetException exception) {
+                HookPlugin.getInstance().getLogger().warning("Unable to instantiate a tracking listener:");
+                exception.printStackTrace();
+            }
+        });
     }
 
     @EventHandler
